@@ -3,13 +3,15 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
     class Canvas2D {
         constructor(w, h) {
             this.canvas = document.createElement('canvas')
+//            this.canvas.style.width = `${w}px`
+//            this.canvas.style.height = `${w}px`
             this.ctx = this.canvas.getContext(`2d`, {alpha:true, colorSpace:'srgb', desynchronized:false, willReadFrequently:true})
             this.d = this.ctx.createImageData(w, h)
             this.draw()
             this.put()
         }
         dot(x, y, r, g, b, a) {
-            console.log(x, y, r, g, b, a)
+            //console.log(x, y, r, g, b, a)
             this.d.data[(x + y * this.d.width) * 4] = r
             this.d.data[(x + y * this.d.width) * 4 + 1] = g
             this.d.data[(x + y * this.d.width) * 4 + 2] = b
@@ -32,21 +34,180 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             this.pixcels = JSON.parse(JSON.stringify((new Array(w)).fill((new Array(h)).fill(0))));
             console.log(this.pixcels)
         }
-        dot(x, y, i) { this.cvs.dot(x, y, ...this.colors[i]) }
+        dot(x, y, i) { this.pixcels[x][y]=i }
+        //dot(x, y, i) { this.pixcels[x][y]=i; this.#dot(x,y,i) }
+        #dot(x, y, i) { this.cvs.dot(x, y, ...this.colors[i]) }
         make() {
             console.log(this.cvs.d.width)
             for (let x=0; x<this.cvs.d.width; x++) {
                 for (let y=0; y<this.cvs.d.height; y++) {
-                    console.log(this.pixcels[x][y], this.colors[this.pixcels[x][y]], ...this.colors[this.pixcels[x][y]])
-                    this.dot(x, y, this.pixcels[x][y])
+                    //console.log(this.pixcels[x][y], this.colors[this.pixcels[x][y]], ...this.colors[this.pixcels[x][y]])
+                    this.#dot(x, y, this.pixcels[x][y])
                 }
             }
-            this.cvs.put();
+            this.cvs.put()
+        }
+    }
+    class Scaler {
+        static nearestNeighbor(imgDt, dstCanvas, rate) {
+            if (imgDt instanceof HTMLImageElement) { imgDt = getPixelsFromImage(imgDt) }
+            if (!(imgDt instanceof ImageData)) { throw new Error(`引数imgDtはImageData型またはHTMLImageElement型のみ有効です。`) }
+            // 元画像のピクセル配列と縦横サイズを取得
+            const srcPixels = imgDt.data;
+            const srcWidth = imgDt.width;
+            const srcHeight = imgDt.height;
+            // 転送先キャンバスのサイズを設定
+            const dstWidth = dstCanvas.width = Math.floor(srcWidth * rate);
+            const dstHeight = dstCanvas.height = Math.floor(srcHeight * rate);
+            // 転送先キャンバスに乗せるピクセル配列を取得
+            const dstContext = dstCanvas.getContext('2d');
+            const dstImageData = dstContext.createImageData(dstWidth, dstHeight);
+            const dstPixels = dstImageData.data;
+            // 元画像のピクセル配列から、指定した座標のrgbaを取得する
+            const getSrcColor = (x, y) => {
+                const p = ((srcHeight * y) + x) * 4;
+                return [srcPixels[p], srcPixels[p+1], srcPixels[p+2], srcPixels[p+3]];
+            }
+            // 画素の転送処理
+            for (let dstY = 0; dstY < dstHeight; dstY++) {
+                const srcY = Math.floor(dstY / rate);
+                const linePos = dstY * dstWidth;
+                for (let dstX = 0; dstX < dstWidth; dstX++) {
+                    const p = (linePos + dstX) * 4;
+                    const srcX = Math.floor(dstX / rate);
+                    const [r, g, b, a] = getSrcColor(srcX, srcY);
+                    dstPixels[p] = r;
+                    dstPixels[p+1] = g;
+                    dstPixels[p+2] = b;
+                    dstPixels[p+3] = a;
+                }
+            }
+            // キャンバスに反映
+            dstContext.putImageData(dstImageData, 0, 0);
+        }
+        static #getPixelsFromImage(image) {
+            const canvasSrc = document.createElement('canvas');
+            const w = canvasSrc.width = image.width;
+            const h = canvasSrc.height = image.height;
+            const context = canvasSrc.getContext("2d");
+            context.drawImage(image, 0, 0, w, h);
+            //return context.getImageData(0, 0, w, h).data;
+            return context.getImageData(0, 0, w, h)
+        }
+    } 
+    class CheckedPattern {
+        static draw(canvas, width, height, size, colors=[[196,196,196],[128,128,128]]) {
+            const ctx = canvas.getContext('2d');
+            let i = 0
+            console.log(canvas.width, canvas.height)
+            for (let y=0; y<height; y+=size) {
+                for (let x=0; x<width; x+=size) {
+                    ctx.fillStyle = `rgb(${colors[++i%2].join(' ')})`;
+                    ctx.fillStyle = `rgb(${colors[i%2].join(' ')})`;
+                    ctx.fillRect(x, y, size, size)
+                    console.log(x, y, i, i%2, colors[i%2].join(' '))
+                }
+            }
+            //ctx.fill()
+        }
+    }
+    class Grid {
+        static draw(canvas, step=16) {
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width
+            const H = canvas.height
+            const p = 0 // padding
+            for (let x=0; x<=W; x+=step) {
+                ctx.moveTo(0.5 + x + p, p);
+                ctx.lineTo(0.5 + x + p, H + p);
+            }
+            for (var y=0; y<=canvas.height; y+=step) {
+                ctx.moveTo(p, 0.5 + y + p);
+                ctx.lineTo(W + p, 0.5 + y + p);
+            }
+            ctx.strokeStyle = 'black';
+            ctx.stroke();
+        }
+    }
+    class AlphaBrender {
+        static blend(src, dst, rslt) {
+            if (!(src instanceof ImageData)) { throw new Error(`引数はImageData型であるべきです。`) }
+            if (!(dst instanceof ImageData)) { throw new Error(`引数はImageData型であるべきです。`) }
+            for( var i=0; i<src.data.length; i++ ){ 
+                this.#blend(4*i, src, dst, rslt);
+            }
+        }
+        static #blend(offset, src, dst, rslt) {
+            offset || (offset = 0);
+            rslt || (rslt = dst);
+            var a = src.data[offset + 3];
+//            if (a == 0) { this.#set(offset, rslt, dst) } // 完全透明
+//            else if (a == 0xFF) { this.#set(offset, rslt, src) } // 完全不透明
+            if (a == 0) { // 完全透明
+                rslt.data[offset + 0] = dst.data[offset + 0];
+                rslt.data[offset + 1] = dst.data[offset + 1];
+                rslt.data[offset + 2] = dst.data[offset + 2];
+                rslt.data[offset + 3] = dst.data[offset + 3];
+            }
+            else if (a == 0xFF) { // 完全不透明
+                rslt.data[offset + 0] = src.data[offset + 0];
+                rslt.data[offset + 1] = src.data[offset + 1];
+                rslt.data[offset + 2] = src.data[offset + 2];
+                rslt.data[offset + 3] = src.data[offset + 3];
+            }
+            else { // 半透明
+                rslt.data[offset + 0] = ((src.data[offset + 0] - dst.data[offset + 0]) * a >> 8) + dst.data[offset + 0];
+                rslt.data[offset + 1] = ((src.data[offset + 1] - dst.data[offset + 1]) * a >> 8) + dst.data[offset + 1];
+                rslt.data[offset + 2] = ((src.data[offset + 2] - dst.data[offset + 2]) * a >> 8) + dst.data[offset + 2];
+                rslt.data[offset + 3] = ((src.data[offset + 3] - dst.data[offset + 3]) * a >> 8) + dst.data[offset + 3];
+            }
+            return rslt;
+        }
+        static #set(offset, rslt, input) {
+            rslt.data[offset + 0] = input.data[offset + 0];
+            rslt.data[offset + 1] = input.data[offset + 1];
+            rslt.data[offset + 2] = input.data[offset + 2];
+            rslt.data[offset + 3] = input.data[offset + 3];
         }
     }
     const ici = new IndexedColorImage(16,16)
+    ici.colors.push([255,0,0,128])
+    for (let x=0; x<ici.cvs.d.width; x++) {
+        for (let y=0; y<ici.cvs.d.height; y++) {
+            ici.dot(x,y,1)
+        }
+    }
+    ici.dot(4,6,0)
+    ici.dot(4,7,0)
+    ici.dot(4,8,0)
+    ici.dot(12,6,0)
+    ici.dot(12,7,0)
+    ici.dot(12,8,0)
     ici.make()
     console.log(ici)
     document.body.appendChild(ici.cvs.canvas)
+
+    const scale = 16
+    const nn = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    Scaler.nearestNeighbor(ici.cvs.d, nn.cvs.canvas, scale)
+    const bg = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    CheckedPattern.draw(bg.cvs.canvas, ici.cvs.d.width*scale, ici.cvs.d.height*scale, scale)
+    const view = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    AlphaBrender.blend(nn.cvs.d, bg.cvs.d, view.cvs.d)
+    console.log(nn.cvs.canvas)
+    //Grid.draw(nn.cvs.canvas, scale)
+    Grid.draw(view.cvs.canvas, scale)
+    //document.body.appendChild(nn.cvs.canvas)
+    document.body.appendChild(nn.cvs.canvas)
+    document.body.appendChild(bg.cvs.canvas)
+    document.body.appendChild(view.cvs.canvas)
+
+
+//    const nnCanvas = document.createElement('canvas')
+//    CheckedPattern.draw(nnCanvas, 16*scale, 16*scale, scale)
+//    Scaler.nearestNeighbor(ici.cvs.d, nnCanvas, scale)
+//    Grid.draw(nnCanvas, scale)
+//    document.body.appendChild(nnCanvas)
+//    image-rendering: pixelated;
 })
 </script>
