@@ -32,7 +32,7 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             this.cvs = new Canvas2D(w,h)
             this.colors = [[0,0,0,255]]
             this.pixcels = JSON.parse(JSON.stringify((new Array(w)).fill((new Array(h)).fill(0))));
-            console.log(this.pixcels)
+            //console.log(this.pixcels)
         }
         dot(x, y, i) { this.pixcels[x][y]=i }
         //dot(x, y, i) { this.pixcels[x][y]=i; this.#dot(x,y,i) }
@@ -49,6 +49,46 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
         }
     }
     class Scaler {
+        static nearestNeighbor(src, dst, rate) { // IndexedColorImage
+            if (!(src instanceof IndexedColorImage)) { throw new Error(`引数srcはIndexedColorImage型であるべきです。`) }
+            if (!(dst instanceof IndexedColorImage)) { throw new Error(`引数dstはIndexedColorImage型であるべきです。`) }
+//            if (imgDt instanceof HTMLImageElement) { imgDt = getPixelsFromImage() }
+//            if (!(imgDt instanceof ImageData)) { throw new Error(`引数imgDtはImageData型またはHTMLImageElement型のみ有効です。`) }
+            // 元画像のピクセル配列と縦横サイズを取得
+            const srcPixels = src.cvs.d.data;
+            const srcWidth = src.cvs.d.width;
+            const srcHeight = src.cvs.d.height;
+            // 転送先キャンバスのサイズを設定
+            const dstWidth = dst.cvs.canvas.width = Math.floor(srcWidth * rate);
+            const dstHeight = dst.cvs.canvas.height = Math.floor(srcHeight * rate);
+            // 転送先キャンバスに乗せるピクセル配列を取得
+            //const dstContext = .getContext('2d');
+            const dstImageData = dst.cvs.ctx.createImageData(dstWidth, dstHeight);
+            const dstPixels = dst.cvs.d.data;
+            // 元画像のピクセル配列から、指定した座標のrgbaを取得する
+            const getSrcColor = (x, y) => {
+                const p = ((srcHeight * y) + x) * 4;
+                return [srcPixels[p], srcPixels[p+1], srcPixels[p+2], srcPixels[p+3]];
+            }
+            // 画素の転送処理
+            for (let dstY = 0; dstY < dstHeight; dstY++) {
+                const srcY = Math.floor(dstY / rate);
+                const linePos = dstY * dstWidth;
+                for (let dstX = 0; dstX < dstWidth; dstX++) {
+                    const p = (linePos + dstX) * 4;
+                    const srcX = Math.floor(dstX / rate);
+                    const [r, g, b, a] = getSrcColor(srcX, srcY);
+                    dstPixels[p] = r;
+                    dstPixels[p+1] = g;
+                    dstPixels[p+2] = b;
+                    dstPixels[p+3] = a;
+                }
+            }
+            // キャンバスに反映
+            //dstContext.putImageData(dstImageData, 0, 0);
+            dst.cvs.put()
+        }
+        /*
         static nearestNeighbor(imgDt, dstCanvas, rate) {
             if (imgDt instanceof HTMLImageElement) { imgDt = getPixelsFromImage(imgDt) }
             if (!(imgDt instanceof ImageData)) { throw new Error(`引数imgDtはImageData型またはHTMLImageElement型のみ有効です。`) }
@@ -85,6 +125,7 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             // キャンバスに反映
             dstContext.putImageData(dstImageData, 0, 0);
         }
+        */
         static #getPixelsFromImage(image) {
             const canvasSrc = document.createElement('canvas');
             const w = canvasSrc.width = image.width;
@@ -108,10 +149,34 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
                     //ctx.fillStyle = `rgb(${colors[i%2].join(' ')})`;
                     ctx.fillStyle = `rgb(${colors[((x+y)/size)%2].join(' ')})`;
                     ctx.fillRect(x, y, size, size)
-                    console.log(x, y, i, i%2, colors[i%2].join(' '))
+                    //console.log(x, y, i, i%2, colors[i%2].join(' '))
                 }
             }
             ctx.fill()
+        }
+        static drawPixcel(ici, size, colors=[[196,196,196],[128,128,128]]) {
+            //console.log(canvas.width, canvas.height)
+            //console.log(width, height)
+            for (let y=0; y<ici.cvs.d.height; y+=size) {
+                for (let x=0; x<ici.cvs.d.width; x+=size) {
+                    //ctx.fillStyle = `rgb(${colors[++i%2].join(' ')})`;
+                    //ctx.fillStyle = `rgb(${colors[i%2].join(' ')})`;
+//                    ctx.fillStyle = `rgb(${colors[((x+y)/size)%2].join(' ')})`;
+//                    ctx.fillRect(x, y, size, size)
+                    //console.log(x, y, i, i%2, colors[i%2].join(' '))
+                    const c = colors[((x+y)/size)%2]
+                    this.#drawPixcelRect(ici, size, x, y, c[0], c[1], c[2], 255)
+                }
+            }
+//            ctx.fill()
+            ici.cvs.put()
+        }
+        static #drawPixcelRect(ici, size, sx, sy, r, g, b, a) {
+            for (let x=sx; x<sx+size; x++) {
+                for (let y=sy; y<sy+size; y++) {
+                    ici.cvs.dot(x, y, r, g, b, a)
+                }
+            }
         }
     }
     class Grid {
@@ -161,11 +226,9 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
                 ctx.moveTo(0.5 + x + p, p);
                 ctx.lineTo(0.5 + x + p, H + p);
             }
-            for (var y=0; y<=canvas.height; y+=step) {
+            for (let y=0; y<=canvas.height; y+=step) {
                 ctx.moveTo(p, 0.5 + y + p);
                 ctx.lineTo(W + p, 0.5 + y + p);
-//                ctx.moveTo(p, 0.5 + y + p);
-//                ctx.lineTo(W + p, 0.5 + y + p);
             }
             ctx.lineWidth = 1
             ctx.strokeStyle = 'black';
@@ -173,19 +236,70 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             ctx.imageSmoothingEnabled = false;
             ctx.stroke();
         }
+        static draw2d(ici, step=16, dash=[4,4]) {
+            const W = ici.cvs.d.width
+            const H = ici.cvs.d.height
+            const p = 0 // padding
+            for (let x=0; x<=W; x+=step) {
+                ici.cvs.ctx.moveTo(0.5 + x + p, p);
+                ici.cvs.ctx.lineTo(0.5 + x + p, H + p);
+            }
+            for (let y=0; y<=H; y+=step) {
+                ici.cvs.ctx.moveTo(p, 0.5 + y + p);
+                ici.cvs.ctx.lineTo(W + p, 0.5 + y + p);
+            }
+            ici.cvs.ctx.lineWidth = 1
+            ici.cvs.ctx.strokeStyle = 'black';
+            ici.cvs.ctx.setLineDash([2, 2]);
+            ici.cvs.ctx.imageSmoothingEnabled = false;
+            ici.cvs.ctx.stroke();
+        }
+        static drawPixcel(ici, step=16, dash=[4,4]) {
+            //const ctx = ici.cvs.canvas.getContext('2d')
+            ici.cvs.ctx.clearRect(0, 0, ici.cvs.d.width, ici.cvs.d.height)
+            for (let x=0; x<=ici.cvs.d.width; x+=step) {
+                for (let y=0; y<=ici.cvs.d.height; y++) {
+                    //ici.cvs.dot(x, y, 0, 0, 0, 255)
+                    ici.cvs.dot(x, y, 0, 0, 0, ((dash[((x+y))%4]) ? 0 : 255))
+                }
+            }
+            for (let y=0; y<=ici.cvs.d.height; y+=step) {
+                for (let x=0; x<=ici.cvs.d.width; x++) {
+                    //ici.cvs.dot(x, y, 0, 0, 0, 255)
+                    ici.cvs.dot(x, y, 0, 0, 0, ((dash[((x+y))%4]) ? 0 : 255))
+                }
+            }
+            ici.cvs.put()
+            console.log(ici)
+        }
     }
     class AlphaBrender {
+        static blend(src, dst, rslt) { // Canvas2D
+            console.log(rslt)
+            if (!(src instanceof Canvas2D)) { throw new Error(`引数はImageData型であるべきです。`) }
+            if (!(dst instanceof Canvas2D)) { throw new Error(`引数はImageData型であるべきです。`) }
+            rslt || (rslt = dst);
+            console.log(src.d, dst.d, rslt.d)
+            for(let i=0; i<src.d.data.length; i++){ 
+                this.#blend(4*i, src.d, dst.d, rslt.d);
+            }
+            //rslt.ctx.putImageData(rslt.d, 0, 0);
+            rslt.put()
+            console.log(rslt)
+        }
+        /*
         static blend(src, dst, rslt) {
             if (!(src instanceof ImageData)) { throw new Error(`引数はImageData型であるべきです。`) }
             if (!(dst instanceof ImageData)) { throw new Error(`引数はImageData型であるべきです。`) }
-            for( var i=0; i<src.data.length; i++ ){ 
+            for(let i=0; i<src.data.length; i++){ 
                 this.#blend(4*i, src, dst, rslt);
             }
         }
+        */
         static #blend(offset, src, dst, rslt) {
             offset || (offset = 0);
             rslt || (rslt = dst);
-            var a = src.data[offset + 3];
+            let a = src.data[offset + 3];
 //            if (a == 0) { this.#set(offset, rslt, dst) } // 完全透明
 //            else if (a == 0xFF) { this.#set(offset, rslt, src) } // 完全不透明
             if (a == 0) { // 完全透明
@@ -206,6 +320,7 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
                 rslt.data[offset + 2] = ((src.data[offset + 2] - dst.data[offset + 2]) * a >> 8) + dst.data[offset + 2];
                 rslt.data[offset + 3] = ((src.data[offset + 3] - dst.data[offset + 3]) * a >> 8) + dst.data[offset + 3];
             }
+//            console.log(offset, a, rslt, rslt.data, rslt.data[offset+0], rslt.data[offset+1], rslt.data[offset+2], rslt.data[offset+3])
             return rslt;
         }
         static #set(offset, rslt, input) {
@@ -214,14 +329,18 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             rslt.data[offset + 2] = input.data[offset + 2];
             rslt.data[offset + 3] = input.data[offset + 3];
         }
+        static #setV(rslt, offset, input) { for (let i=0; i<4; i++) { rslt.data[offset + i] = input.data[offset + i] } }
     }
     const ici = new IndexedColorImage(16,16)
     ici.colors.push([255,0,0,128])
+    ici.colors.push([0,0,0,0]) // 完全透明
     for (let x=0; x<ici.cvs.d.width; x++) {
         for (let y=0; y<ici.cvs.d.height; y++) {
             ici.dot(x,y,1)
         }
     }
+    ici.dot(1,2,2)
+    ici.dot(2,2,2)
     ici.dot(4,6,0)
     ici.dot(4,7,0)
     ici.dot(4,8,0)
@@ -238,21 +357,32 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
     const grid = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
     const view = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
     for (let i of [nn,bg,grid,view]) {
-        console.log(i, i.cvs, i.cvs, i.cvs.d, i.cvs.d.width, i.cvs.d.height)
+        //console.log(i, i.cvs, i.cvs, i.cvs.d, i.cvs.d.width, i.cvs.d.height)
         i.cvs.canvas.setAttribute('width', `${i.cvs.d.width}px`)
         i.cvs.canvas.setAttribute('height', `${i.cvs.d.height}px`)
         i.cvs.canvas.style.width = `${i.cvs.d.width}px`
         i.cvs.canvas.style.height = `${i.cvs.d.height}px`
         i.cvs.canvas.style.imageRendering = `pixelated`
     }
-    Scaler.nearestNeighbor(ici.cvs.d, nn.cvs.canvas, scale)
-    CheckedPattern.draw(bg.cvs.canvas, ici.cvs.d.width*scale, ici.cvs.d.height*scale, scale)
+    //Scaler.nearestNeighbor(ici.cvs.d, nn.cvs.canvas, scale)
+    Scaler.nearestNeighbor(ici, nn, scale)
+//    CheckedPattern.draw(bg.cvs.canvas, ici.cvs.d.width*scale, ici.cvs.d.height*scale, scale)
+    CheckedPattern.drawPixcel(bg, scale)
     console.log(nn.cvs.canvas)
-    Grid.draw(grid.cvs.canvas, scale)
-    AlphaBrender.blend(nn.cvs.d, bg.cvs.d, view.cvs.d)
+//    Grid.draw(grid.cvs.canvas, scale)
+//    Grid.draw2d(grid, scale)
+    Grid.drawPixcel(grid, scale)
+//    AlphaBrender.blend(nn.cvs.d, bg.cvs.d, view.cvs.d)
+//    AlphaBrender.blend(grid.cvs.d, view.cvs.d)
+//    AlphaBrender.blend(nn.cvs, bg.cvs, view.cvs)
+//    AlphaBrender.blend(grid.cvs, view.cvs)
+    console.log(ici.cvs.d, nn.cvs.d)
+//    AlphaBrender.blend(nn.cvs, grid.cvs, view.cvs)
+    AlphaBrender.blend(nn.cvs, bg.cvs, view.cvs)
     document.body.appendChild(nn.cvs.canvas)
     document.body.appendChild(bg.cvs.canvas)
     document.body.appendChild(grid.cvs.canvas)
+    document.body.appendChild(view.cvs.canvas)
 
 
     /*
