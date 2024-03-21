@@ -18,7 +18,7 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             this.d.data[(x + y * this.d.width) * 4 + 3] = a
         }
         draw() {
-            for (let i = 0; i < this.d.data.length; i+=4) {
+            for (let i = -1; i < this.d.data.length; i+=4) {
                 this.d.data[i + 0] = 190;  // R
                 this.d.data[i + 1] = 0;    // G
                 this.d.data[i + 2] = 210;  // B
@@ -98,20 +98,43 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
     class CheckedPattern {
         static draw(canvas, width, height, size, colors=[[196,196,196],[128,128,128]]) {
             const ctx = canvas.getContext('2d');
+            //ctx.putImageData(ctx.createImageData(width, height), 0, 0);
             let i = 0
             console.log(canvas.width, canvas.height)
+            console.log(width, height)
             for (let y=0; y<height; y+=size) {
                 for (let x=0; x<width; x+=size) {
-                    ctx.fillStyle = `rgb(${colors[++i%2].join(' ')})`;
-                    ctx.fillStyle = `rgb(${colors[i%2].join(' ')})`;
+                    //ctx.fillStyle = `rgb(${colors[++i%2].join(' ')})`;
+                    //ctx.fillStyle = `rgb(${colors[i%2].join(' ')})`;
+                    ctx.fillStyle = `rgb(${colors[((x+y)/size)%2].join(' ')})`;
                     ctx.fillRect(x, y, size, size)
                     console.log(x, y, i, i%2, colors[i%2].join(' '))
                 }
             }
-            //ctx.fill()
+            ctx.fill()
         }
     }
     class Grid {
+        /*
+        static draw(canvas, step=16) {
+            var ctx = canvas.getContext('2d');
+            for (let x=0; x<=canvas.width; x+=step) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                for (let y=0; y<=canvas.height; y+=step) {
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                }
+            }
+            ctx.lineWidth = 0.5;
+            ctx.lineCap = 'butt'; // butt,round,square
+            ctx.lineJoin = 'miter'; // miter,round,bevel
+            ctx.miterLimit = 0;
+            ctx.strokeStyle = 'black';
+            ctx.stroke();
+        }
+        */
+        /*
         static draw(canvas, step=16) {
             const ctx = canvas.getContext('2d');
             const W = canvas.width
@@ -126,6 +149,28 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
                 ctx.lineTo(W + p, 0.5 + y + p);
             }
             ctx.strokeStyle = 'black';
+            ctx.stroke();
+        }
+        */
+        static draw(canvas, step=16) {
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width
+            const H = canvas.height
+            const p = 0 // padding
+            for (let x=0; x<=W; x+=step) {
+                ctx.moveTo(0.5 + x + p, p);
+                ctx.lineTo(0.5 + x + p, H + p);
+            }
+            for (var y=0; y<=canvas.height; y+=step) {
+                ctx.moveTo(p, 0.5 + y + p);
+                ctx.lineTo(W + p, 0.5 + y + p);
+//                ctx.moveTo(p, 0.5 + y + p);
+//                ctx.lineTo(W + p, 0.5 + y + p);
+            }
+            ctx.lineWidth = 1
+            ctx.strokeStyle = 'black';
+            ctx.setLineDash([2, 2]);
+            ctx.imageSmoothingEnabled = false;
             ctx.stroke();
         }
     }
@@ -189,25 +234,63 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
 
     const scale = 16
     const nn = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    const bg = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    const grid = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    const view = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    for (let i of [nn,bg,grid,view]) {
+        console.log(i, i.cvs, i.cvs, i.cvs.d, i.cvs.d.width, i.cvs.d.height)
+        i.cvs.canvas.setAttribute('width', `${i.cvs.d.width}px`)
+        i.cvs.canvas.setAttribute('height', `${i.cvs.d.height}px`)
+        i.cvs.canvas.style.width = `${i.cvs.d.width}px`
+        i.cvs.canvas.style.height = `${i.cvs.d.height}px`
+        i.cvs.canvas.style.imageRendering = `pixelated`
+    }
+    Scaler.nearestNeighbor(ici.cvs.d, nn.cvs.canvas, scale)
+    CheckedPattern.draw(bg.cvs.canvas, ici.cvs.d.width*scale, ici.cvs.d.height*scale, scale)
+    console.log(nn.cvs.canvas)
+    Grid.draw(grid.cvs.canvas, scale)
+    AlphaBrender.blend(nn.cvs.d, bg.cvs.d, view.cvs.d)
+    document.body.appendChild(nn.cvs.canvas)
+    document.body.appendChild(bg.cvs.canvas)
+    document.body.appendChild(grid.cvs.canvas)
+
+
+    /*
+    const scale = 16
+    const nn = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
     Scaler.nearestNeighbor(ici.cvs.d, nn.cvs.canvas, scale)
     const bg = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
     CheckedPattern.draw(bg.cvs.canvas, ici.cvs.d.width*scale, ici.cvs.d.height*scale, scale)
-    const view = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
-    AlphaBrender.blend(nn.cvs.d, bg.cvs.d, view.cvs.d)
     console.log(nn.cvs.canvas)
     //Grid.draw(nn.cvs.canvas, scale)
-    Grid.draw(view.cvs.canvas, scale)
+    const grid = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    Grid.draw(grid.cvs.canvas, scale)
+    const view = new IndexedColorImage(ici.cvs.d.width*scale, ici.cvs.d.height*scale)
+    AlphaBrender.blend(nn.cvs.d, bg.cvs.d, view.cvs.d)
     //document.body.appendChild(nn.cvs.canvas)
+    for (let i of [nn,bg,grid,view]) {
+        console.log(i, i.cvs, i.cvs, i.cvs.d, i.cvs.d.width, i.cvs.d.height)
+//        i.cvs.setAttribute('width', `${i.cvs.d.width*scale}px`)
+//        i.cvs.setAttribute('height', `${i.cvs.d.height*scale}px`)
+//        i.cvs.setAttribute('style', `image-rendering:pixelated;`)
+//        i.cvs.style.width = `${i.cvs.d.width*scale}px`
+//        i.cvs.style.height = `${i.cvs.d.height*scale}px`
+//        i.cvs.style.imageRendering = `pixelated`
+        i.cvs.width = `${i.cvs.d.width*scale}px`
+        i.cvs.height = `${i.cvs.d.height*scale}px`
+    }
     document.body.appendChild(nn.cvs.canvas)
     document.body.appendChild(bg.cvs.canvas)
-    document.body.appendChild(view.cvs.canvas)
-
-
-//    const nnCanvas = document.createElement('canvas')
-//    CheckedPattern.draw(nnCanvas, 16*scale, 16*scale, scale)
-//    Scaler.nearestNeighbor(ici.cvs.d, nnCanvas, scale)
-//    Grid.draw(nnCanvas, scale)
-//    document.body.appendChild(nnCanvas)
+    document.body.appendChild(grid.cvs.canvas)
+    */
+    /*
+    const scale = 16
+    const nnCanvas = document.createElement('canvas')
+    CheckedPattern.draw(nnCanvas, 16*scale, 16*scale, scale)
+    Scaler.nearestNeighbor(ici.cvs.d, nnCanvas, scale)
+    Grid.draw(nnCanvas, scale)
+    document.body.appendChild(nnCanvas)
 //    image-rendering: pixelated;
+    */
 })
 </script>
