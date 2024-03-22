@@ -1,5 +1,64 @@
+<script src="../lib/pixi.js/8.0.3/min.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', async(event)=>{
+//    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+//    PIXI.settings.ROUND_PIXELS = true;
+//    console.log(PIXI)
+//    console.log(PIXI.setting)
+//    console.log(PIXI.DEPRECATED_SCALE_MODES.NEAREST)
+//    PIXI.settings.ScaleMode = 'nearest' // https://pixijs.com/8.x/guides/migrations/v8
+//    PIXI.settings.ROUND_PIXELS = true;
+    const app = new PIXI.Application({
+        width: 10,
+        height: 10,
+        backgroundColor: 0xcccccc
+    });
+    await app.init();
+    document.body.appendChild(app.canvas);
+
+    const ellipse = new PIXI.Graphics()
+        .beginFill(0xff0000)
+        .drawEllipse(0,0,30,20)
+        .endFill();
+    ellipse.pivot.x = 15
+    ellipse.pivot.y = 10
+    ellipse.x = 100;
+    ellipse.y = 100;     
+    ellipse.rotation = Math.PI / 6;
+    app.stage.addChild(ellipse);    
+
+//    const baseTexture = new PIXI.BaseTexture(canvas)
+//    const canvasTexture = new PIXI.Texture(baseTexture);
+//    const sprite = new PIXI.Sprite(canvasTexture);
+    // https://www-html5gamedevs-com.translate.goog/topic/45342-way-to-build-image-pixel-by-pixel/?_x_tr_sl=auto&_x_tr_tl=ja&_x_tr_hl=ja&_x_tr_pto=wapp
+    //    baseTexture.update()
+
+    /*
+    //const app = new PIXI.Application({
+    const app = new PIXI.Application({
+        width: 10,
+        height: 10,
+        backgroundColor: 0xcccccc
+    });
+    await app.init();
+    //document.body.appendChild(app.view);
+    document.body.appendChild(app.canvas);
+
+    const graphics = new PIXI.Graphics();
+    graphics.beginFill(0xFF0000, 1);
+    graphics.drawRect(0, 0, 5, 5);
+    graphics.endFill();
+    app.stage.addChild(graphics)
+
+    var renderTexture = PIXI.RenderTexture.create({ width: app.screen.width, height: app.screen.height, resolution: app.renderer.resolution });
+    app.renderer.render(app.stage, renderTexture);
+    var canvas = app.renderer.plugins.extract.canvas(renderTexture);
+
+    const context = canvas.getContext('2d');
+    const imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+    console.log(imgData.data) //Pints pixel data from whole 10x10 canvas, but ignores pixel data from the background
+    */
+    /*
     class Canvas2D {
         constructor(w, h) {
             this.canvas = document.createElement('canvas')
@@ -16,14 +75,6 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             this.d.data[(x + y * this.d.width) * 4 + 1] = g
             this.d.data[(x + y * this.d.width) * 4 + 2] = b
             this.d.data[(x + y * this.d.width) * 4 + 3] = a
-        }
-        draw() {
-            for (let i = -1; i < this.d.data.length; i+=4) {
-                this.d.data[i + 0] = 190;  // R
-                this.d.data[i + 1] = 0;    // G
-                this.d.data[i + 2] = 210;  // B
-                this.d.data[i + 3] = 255;  // A
-            }
         }
         put(dx=0, dy=0) { this.ctx.putImageData(this.d, dx, dy) }
         get(x, y) {
@@ -262,21 +313,6 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
     function drawSelectedPixcel(e) {
         // マウスポインタがあるピクセルを矩形で囲む(外側:黒, 内側:白)
         console.log(e)
-        /*
-        const sx = (e.offsetX / scale) * scale
-        const ex = sx + scale
-        const sy = (e.offsetY / scale) * scale
-        const ey = sy + scale
-        for (let x=sx; x<scale; x++) {
-            preView.cvs.dot(x, sy, 0, 0, 0, 255)
-            preView.cvs.dot(x, ey, 0, 0, 0, 255)
-        }
-        for (let y=sy; y<scale; y++) {
-            preView.cvs.dot(sx, y, 0, 0, 0, 255)
-            preView.cvs.dot(ex, y, 0, 0, 0, 255)
-        }
-        preView.make()
-        */
         preView.cvs.clear()
         //preView.cvs.dot(parseInt(e.offsetX / scale), parseInt(e.offsetY / scale), 0,255,0,255)
         const sx = parseInt(e.offsetX / scale) * scale
@@ -313,5 +349,6 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
     document.body.appendChild(grid.cvs.canvas)
     document.body.appendChild(document.createElement('br'))
     document.body.appendChild(view.cvs.canvas)
+    */
 })
 </script>
