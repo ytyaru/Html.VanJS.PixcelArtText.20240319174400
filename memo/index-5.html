@@ -51,6 +51,31 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
             this.cvs.put()
         }
     }
+    class Drawer {
+        static dot(ici, x, y, c) {  for (let i=0; i<4; i++) { ici.cvs.d.data[(x + y * ici.cvs.d.width) * 4 + i] = c[i] } } 
+        static lineX(ici, Y, c) { for (let x=0; x<=ici.cvs.d.width; x++) { ici.cvs.dot(x, Y, c) } }
+        static lineY(ici, X, c) { for (let y=0; y<=ici.cvs.d.height; y++) { ici.cvs.dot(X, y, c) } }
+        static dashLineX(ici, Y, c, ary=[4,4]) { for (let x=0; x<=ici.cvs.d.width; x++) { ici.cvs.dot(x, Y, c) } }
+        static dashLineY(ici, X, c, ary=[4,4]) { for (let y=0; y<=ici.cvs.d.height; y++) { ici.cvs.dot(X, y, c) } }
+        static line(ici, sx, sy, ex, ey, c) {
+            const lx = Math.abs(ex - sx)
+            const ly = Math.abs(ey - sy)
+            const dx = (((ex - sx) < 0) ? -1 : 1)
+            const dy = (((ey - sy) < 0) ? -1 : 1)
+            for (let x=sx; x<sx+lx; x+=dx) {
+                for (let y=sy; y<sy+ly; y+=dy) {
+                    Drawer.dot(ici, x, y, r, g, b, a)
+                }
+            }
+        }
+        static rect(ici, sx, sy, ex, ey, c) {
+
+        }
+        static fillRect(ici, sx, sy, ex, ey, sc, fc) { // strokeColor, fillColor
+
+        }
+    }
+
     class Scaler { // https://nullpon.moe/dev/sample/canvas/nearest.html
         static nearestNeighbor(src, dst, rate) { // IndexedColorImage
             if (!(src instanceof IndexedColorImage)) { throw new Error(`引数srcはIndexedColorImage型であるべきです。`) }
@@ -263,12 +288,20 @@ window.addEventListener('DOMContentLoaded', async(event)=>{
         const sy = parseInt(e.offsetY / scale) * scale
         preView.cvs.dot(sx, sy, 0,255,0,255)
         const c = [0,255,0,255]
-        for (let x=sx; x<=scale; x++) { preView.cvs.dot(x, sy, ...c); preView.cvs.dot(x, sy+scale, ...c); }
-        for (let y=sy; y<=scale; y++) { preView.cvs.dot(sx, y, ...c); preView.cvs.dot(sx+scale, y, ...c); }
-
+        for (let x=sx; x<=sx+scale; x++) { preView.cvs.dot(x, sy, ...c); preView.cvs.dot(x, sy+scale, ...c); }
+        for (let y=sy; y<=sy+scale; y++) { preView.cvs.dot(sx, y, ...c); preView.cvs.dot(sx+scale, y, ...c); }
+//        for (let x=sx; x<=sx+scale; x++) {
+//            for (let y=sy; y<=sy+scale; y++) {
+//                preView.cvs.dot(x, y, ...c);
+//            }
+//        }
         preView.cvs.put()
         //console.log(parseInt(e.offsetX / scale), parseInt(e.offsetY / scale))
         console.log(sx, sy)
+
+        view.cvs.clear()
+        AlphaBrender.blend(nn.cvs, bg.cvs, view.cvs)
+        AlphaBrender.blend(grid.cvs, view.cvs)
         AlphaBrender.blend(preView.cvs, view.cvs)
     })
     document.body.appendChild(nn.cvs.canvas)
